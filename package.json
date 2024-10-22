@@ -1,0 +1,27 @@
+{
+  "name": "balancer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "balancer.js",
+  "scripts": {
+    "1 balancer_main": "nodemon ./balancer/balancer 3100 main",
+    "2 balancer_subs": "nodemon ./balancer/balancer 3101 subs http://127.0.0.1:3100",
+    "3 coordinator_main": "nodemon ./coordinator/coordinator 3000 http://127.0.0.1:3100 http://127.0.0.1:3101 main",
+    "4 coordinator_subs": "nodemon ./coordinator/coordinator 3001 http://127.0.0.1:3100 http://127.0.0.1:3101 subs http://127.0.0.1:3000",
+    "5 processor1": "nodemon ./processor/processor process1 4001 100 1 http://127.0.0.1:3000 http://127.0.0.1:3001",
+    "6 processor2": "nodemon ./processor/processor process2 4002 100 0.3 http://127.0.0.1:3000 http://127.0.0.1:3001",
+    "7 processor3": "nodemon ./processor/processor process3 4003 100 0.5 http://127.0.0.1:3000 http://127.0.0.1:3001"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.2",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-validator": "^7.1.0",
+    "mqtt": "^5.9.0",
+    "uid": "^2.0.2"
+  }
+}
