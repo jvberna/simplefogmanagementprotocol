@@ -1,6 +1,14 @@
 # simplefogmanagementprotocol
 Simple FOG management protocol prototype applied to IoT infrastructures
 
-Explicar que para ejecutar el ejemplo hacer:
-- npm i // para instalar las librerias
-- ejecutar los scripts de package.json en el orden 1, 2, 3...7
+Install libraries
+- npm i 
+
+Execute components in order from package.json:
+- 1 balancer_main
+- 2 balancer_subs
+- 3 coordinator_main
+- 4 coordinator_subs
+- 5 processor1
+- 6 processor2
+- 7 processor3
