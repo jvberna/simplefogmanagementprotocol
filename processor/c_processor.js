@@ -1,7 +1,6 @@
-// Para tipar los parámetros
-const { response, request } = require('express'); // Response de Express
+// To type the parameters
+const { response, request } = require('express'); // Response from Express
 
-//const { addProcessor, deleteProcessor, updateBalancerList } = require('./functions');
 const { createSFMPMessage } = require('../commons/commons')
 
 const { internalConfig } = require('./processorData')
@@ -20,10 +19,9 @@ const processProcessorSFMP = (req = request, res = response) => {
 
         if (Operation == 'AYA') {
             reply = createSFMPMessage('REPLY', 'RESULT', { info: 'OK', UID: UID }); 
-            //console.log('Recibido AYA de',UID)
         }
 
-        // Se envía el mensaje de reply generado
+        // The generated reply message is sent
         res.status(200).json(reply);
         return;
     }
@@ -33,11 +31,11 @@ const processProcessorSFMP = (req = request, res = response) => {
 
 }
 
-// función que procesa un mensaje cuando es recibido
+// function that processes a message when it is received
 const processMessage = (req = request, res = response) => {
 
     const msg = req.body.Data;
-    console.log('Nos llega un mensaje del balanceador:', msg);
+    console.log('We receive a message from the balancer:', msg);
 
     res.status(200).json({
         UID: 'sendBalancerMessage',

@@ -1,16 +1,16 @@
-// Librerias de terceros
-// Router de Express
+// Third-party libraries 
+// Express Router
 const { Router } = require('express');
 
 const { validateFields, validateSFMPMessage } = require('../commons/commons')
 
-// Controldor para procesar el post del balanceador
+// Controller to process the post of the balancer
 const { processBalancerSFMP } = require('./c_balancer');
 
-// Ruta post
+// post Route 
 const router = Router();
 
-// Menajo de mensajes del protoclo SFMP
+// SFMP protocycle message handling
 router.post('/' + process.env.SFMPROUTE, [
     validateSFMPMessage(),
     validateFields

@@ -1,36 +1,36 @@
-// Cargar variables de entorno
+// Load environment variables
 require('dotenv').config();
 
-// Incluirmos la librería de express para levantar una API y CORS
+// We include the express library to build an API and CORS.
 const express = require('express')
 const cors = require('cors');
 
-// Metemos body-parser para poder parsear las request que nos llegarán por la API
+// We add body-parser to be able to parse the requests that we receive through the API.
 const bodyParser = require('body-parser');
 
-// Funciones auxiliares
+// Auxiliary functions
 const { parseArgs } = require('./functions')
 
-// Obtenemso los párametros y los validamos o error
+// We obtain the parameters and validate them or error
 const parameters = parseArgs(process.argv);
 if (parameters==-1) return
 
-// Creamos la APP y la configuramos para parsear JSON en la request
+// We create the APP and configure it to parse JSON in the request
 const app = express()
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
 
-// atendemos solo peticion post
+// we attend only post request
 app.use('/', require('./r_coordinator'));
 
-// Levantamos el servidor en un puerto
+// We lift the server on a port
 app.listen(parameters.port, function () {
     console.log(`COORDINATOR ${parameters.type} LISTENING PORT ${parameters.port}`);
 })
 
-// Activamos la comprobación de AYA
+// We activate the AYA check
 const { activateAYA, activateUPDATECONFIG } = require('./c_coordinator')
 
 activateAYA();

@@ -49,7 +49,7 @@ const msg = {
     ${msg_common}`,
 }
 
-// Tipos de proceso permitido
+// Permitted process types
 const typePermeted = ['main', 'subs']
 
 const { setInternal } = require('./coordinatorData');
@@ -57,8 +57,8 @@ const { setInternal } = require('./coordinatorData');
  * Receibe array or args and return object whith arguments validation or error
  */
 const parseArgs = (args) => {
-    //    "controlSuplente": "nodemon control.js 3101 http://127.0.0.1:3000/ http://127.0.0.1:3100/ suplente http://127.0.0.1:3001/",
-    // Obtenemso el puerto de la entrada de comando 
+    //    "controlSubstitute": "nodemon control.js 3101 http://127.0.0.1:3000/ http://127.0.0.1:3100/ substitute http://127.0.0.1:3001/",
+    // We get the port of the command input
 
     const port = Number(args[2] || 0);
 
@@ -67,7 +67,7 @@ const parseArgs = (args) => {
         return -1;
     }
 
-    // obtenemos url balanceador so el type, debe ser main o subs
+    // we get url balancer so the type, must be main or subs
     const urlBalancerMain = String(args[3] || '');
     if (urlBalancerMain.length<=0) {
         console.error(msg.error_url_balancer_main);
@@ -101,10 +101,10 @@ const parseArgs = (args) => {
 
 }
 
-// Función que añade un nuevo nodo a la lista si no existe
-// cada nodo tiene la forma: {name:'nombre', capacity:numer, url:'call_url', preference:number}
+// Function that adds a new node to the list if it does not exist.
+// each node has the form: {name:'nombre', capacity:numer, url:'call_url', preference:number}
 const addProcessor = (processor, list) => {
-    // comprobamos que nos han pasado los datos necesarios para dar de alta un nodo
+    // we check that they have passed us the necessary data to register a node
     if (processor.name == undefined || String(processor.name).length <= 0) {
         return -1;
     }
@@ -117,7 +117,7 @@ const addProcessor = (processor, list) => {
     if (processor.preference == undefined || Number(processor.preference) < 0) {
         return -4;
     }
-    // comprobar si el nodo ya existe en la lista, no pueden tener duplicado nombre
+    // check if the node already exists in the list, cannot have a duplicate name
     const found = list.find((element => element.name == processor.name));
     if (found) {
         return 0;
@@ -128,39 +128,38 @@ const addProcessor = (processor, list) => {
     return 1;
 }
 
-// Eliminar un nodo de la lista si existe
+// Remove a node from the list if it exists
 const deleteProcessor = (processor, list) => {
-    // comprobamos que nos han pasado los datos necesarios para dar de alta un nodo
+    // we check that they have passed us the necessary data to register a node
     if (!processor.name || String(processor.name).length <= 0) {
         return -1;
     }
-    // comprobar si el nodo ya existe en la lista, no pueden tener duplicado nombre
+    // check if the node already exists in the list, cannot have a duplicate name
     const found = list.findIndex(element => element.name == processor.name);
     if (found < 0) return 0;
     list = list.splice(found, 1)
     return 1;
 }
 
-// Función que ordea la lista de procesadores por factor de preferencia y capacidad
+// Function that sorts the list of processors by preference and capacity factor
 const orderProcessorList = (list) => {
     list.sort( (a,b) => {
         return b.preference-a.preference || b.capacity-a.capacity;
     })
 }
 
-// función que genera la nueva lista de carga del balanceador en función de la lista de procesadores
+// function that generates the new load list of the load balancer based on the list of processors
 const updateBalancerList = (processorsList, balancerList, receivedMesagges) => {
     orderProcessorList(processorsList);
-    // Vaciamos la lista de procesadores del balanceador
+    // Empty the list of processors in the balancer.
     balancerList.splice(0,balancerList.length);
-    // Añadimos los nodos suficientes para cubrir la necesidad de carga del balanceador
+    // We add enough nodes to cover the load requirement of the balancer.
     var totalCapacity=0;
-    // Creamos la lista de balancedList
+    // We create the balancedList
     for (i=0; i<processorsList.length && (totalCapacity<receivedMesagges || receivedMesagges==-1) ; i++) {
         balancerList.push({name:processorsList[i].name, capacity:processorsList[i].capacity, url:processorsList[i].url});
         totalCapacity += processorsList[i].capacity;
     }
-    //console.log('Calculando load:')
     for (i=0; i<balancerList.length; i++) {
         balancerList[i].load = Number(Number((balancerList[i].capacity * 100) / totalCapacity).toFixed(2));
     }

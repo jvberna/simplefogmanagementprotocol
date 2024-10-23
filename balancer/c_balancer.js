@@ -1,25 +1,25 @@
-// Para tipar los parámetros
-const { response, request } = require('express'); // Response de Express
+// To type the parameters
+const { response, request } = require('express'); // Response from Express
 
 const { updateBalancerList } = require('./functions');
 const { createSFMPMessage, sendSFMPMessage, createResendMessage } = require('../commons/commons')
 
-// Lista de nodos que maneja el balanceador
-// Lista de procesadores
+// List of nodes handled by the balancer
+// List of processors
 const balancerList = [
     //    { name: 'example1', load: 50, url: 'http://localhost:3001' }
 ]
 
-// mecanismo para reenvio, temporal, esto se va fuera
-var pivote = 0;
-
+// Forwarding mechanism
+var pivot = 0;
 
 
 const { getInternal, internalConfig } = require('./balancerData');
 
-// Variables para controlar reenvios de AYA al coordinador principal
+// Variables to control AYA forwarding to the main coordinator
 var balancerMainMaxAYA = Number(process.env.AYAMAXSENDS);
-// Variable para controlar si soy coordinadorSustitutoActivo
+
+// Variable to control whether I am coordinatorSubstituteActive
 var balancerSubsActive = false;
 var receivedMessages = -1;
 
@@ -38,7 +38,7 @@ const processBalancerSFMP = (req = request, res = response) => {
             return;
         }
 
-        // Me llega un infostatus del balanceador secundario, cojo los datos
+        // I receive an infostatus from the secondary balancer, I take the data
         if (Operation == 'INFOSTATUS') {
             receivedMessages = Data.receivedMessages;
             balancerList.splice(0, balancerList.length);
@@ -50,27 +50,25 @@ const processBalancerSFMP = (req = request, res = response) => {
             return;
         }
 
-        // Si nos piden el estado del sistema, contestamos
+        // If asked for the status of the system, we answer
         if (Operation == 'GETSTATUS') {
             reply = createSFMPMessage('REPLY', 'RESULT', { info: 'OK', UID: UID })
             res.status(200).json(reply);
-            // si soy el balanceador subs y no estoy activo, NO contesto
+            // if I am the subsitute balancer and I am not active, I do NOT answer.
             if (getInternal('type') == 'subs' && balancerSubsActive == false) return
 
-            //console.log('GETSTATUS, nos llega Data:', Data);
             const urlCoordinator = Data.urlCoordinator;
-            // load implica porcentaje, receivedMessages indica cantidad
+
+            // load implies percentage, receivedMessages indicates quantity
             const newData = { receivedMessages: receivedMessages, balancerList: balancerList };
             const messageINFOSTATUS = createSFMPMessage('REQUEST', 'INFOSTATUS', newData)
-            //console.log('Hacemos un infoSTATUS a a:', urlCoordinator, ' con la lista:', newData)
             sendSFMPMessage(urlCoordinator, messageINFOSTATUS);
 
             return;
         }
 
-        // Llega una nueva configuración y la guardamos
+        // A new configuration arrives and we save it
         if (Operation == 'SETCONFIG') {
-            //console.log('Actualizamos balancerList:', Data);
             updateBalancerList(balancerList, Data);
             reply = createSFMPMessage('REPLY', 'RESULT', { info: 'OK', UID: UID })
             res.status(200).json(reply);
@@ -89,7 +87,7 @@ const processBalancerSFMP = (req = request, res = response) => {
     }
 
     if (Type == 'REPLY') {
-        // NO HACEMOS NADA
+        // WE DO NOTHING
     }
 
     res.status(200).json(reply);
@@ -104,22 +102,18 @@ const activeAYA = () => {
 }
 
 const balancerAYA = () => {
-    // Envio un AYA al principal
+    // I send an AYA to the principal
     const messageAYABalancer = createSFMPMessage('REQUEST', 'AYA', {});
-    //console.log('BalancedorAYA envía a: ', getInternal('urlMain') + '/' + process.env.SFMPROUTE, ' el mensaje: ', messageAYABalancer)
     axios.post(getInternal('urlMain') + '/' + process.env.SFMPROUTE, messageAYABalancer)
         .then(function (response) {
-            // console.log('lo qu erespende al aya:',response)
-            //console.log('El balanceador principal sigue activo:', messageAYABalancer.UID == response.data.Data.UID);
-            // Si soy un subs activo y me acaban de responder, le hago un INFOSTATUS al principal
+
+            // If I am an active subsitute and I have just received a reply, I INFOSTATUS the main one
             if (balancerSubsActive) {
-                // Desactivamos el envio de mensajes desde balanceador hacia los procesadores
-                // para eso simplemente cerramos la conexión con MQTT
+                // Disable sending of messages from the balancer to the processors.
+                // For this we simply close the connection to MQTT.
                 disconnectMQTT();
                 const messageINFOSTATUS = createSFMPMessage('REQUEST', 'INFOSTATUS', { receivedMessages, balancerList });
-                //console.log('Envio INFOSTATUS del balanceador subs al main:', getInternal('urlMain'), balancerList)
                 sendSFMPMessage(getInternal('urlMain'), messageINFOSTATUS);
-                //console.log('Desconecto de MQTT')
             }
 
             balancerMainMaxAYA = Number(process.env.AYAMAXSENDS);
@@ -127,34 +121,29 @@ const balancerAYA = () => {
             setTimeout(balancerAYA, process.env.AYASENDTIME);
         })
         .catch(function (error) {
-            //console.log('El balanceador principal no responde:');//,error);
             balancerMainMaxAYA--;
             if (balancerMainMaxAYA <= 0) {
-                //console.log('Ya se han terminado los intentos, debe asumir el rol de balanceador principal principal');
-                // Si soy subs y no he asumido ya el control, asumo el control, me conecto a MQTT y le sigo lanzando AYA al balanceador
+                // If I am subs and have not already taken over, I take over, connect to MQTT and keep throwing AYA at the balancer.
                 if (getInternal('type') == 'subs' && balancerSubsActive == false) {
 
                     balancerSubsActive = true;
-                    //console.log('Coneccto con MQTT');
                     connectMQTT();
 
                 }
 
-                // Dejo programado el siguiete AYA por
-                //console.log('Dejo el AYA de comprobación activo')
+                // I leave the next AYA scheduled 
                 setTimeout(balancerAYA, Number(process.env.AYASENDTIME))
 
 
             } else {
-                //console.log('Reenviamos AYA a balanceador principal en:', process.env.AYARESENDTIME)
                 setTimeout(balancerAYA, Number(process.env.AYARESENDTIME))
             }
         })
 
 }
 
-// Conectarnos con MQTT
-// Configuramos la conexión a MQTT para pillar la de TTN
+// Connecting with MQTT
+// We set up the MQTT connection to catch the TTN connection.
 const config = require('./ttn/configTTN');
 const mqtt = require('mqtt');
 const { create } = require('domain');
@@ -168,27 +157,26 @@ const disconnectMQTT = () => {
 
 const { addMessage, totalMeters} = require('./loadMeter');
 
-// Función que reenvia el mensaje al procesador que toca en funcíon de su carga
+// Function that forwards the message to the processor that plays according to its load.
 const resendMessage = (message) => {
     console.log('Resend message')
     addMessage();
     receivedMessages = totalMeters();
-    //console.log('Balanceador receivedMessages:',receivedMessages)
     if (balancerList.length > 0) {
-        console.log('Enviamos a:',balancerList[pivote].url + '/' + process.env.MSGROUTE)
+        console.log('We send to:',balancerList[pivot].url + '/' + process.env.MSGROUTE)
         const newMessage = createResendMessage(getInternal('type'), message.toString());
-        axios.post(balancerList[pivote].url + '/' + process.env.MSGROUTE, newMessage)
+        axios.post(balancerList[pivot].url + '/' + process.env.MSGROUTE, newMessage)
             .then(function (response) {
 
             })
 
             .catch(function (error) {
             })
-        // Avanzamos pivite si no está ya al final
-        pivote == balancerList.length - 1 ? pivote=0: pivote++;
-        //console.log('Pivote nuevo:',pivote);
+
+        // We advance pivot if not already there at the end
+        pivot == balancerList.length - 1 ? pivot=0: pivot++;
     } else {
-        console.log('No hay elementos en la lista de balancerList')
+        console.log('There are no items in the balancerList')
     }
 }
 
@@ -205,13 +193,8 @@ const connectMQTT = () => {
 
     clientMQTT.on('message', async (topic, message) => {
         try {
-            // console.log('Mensaje original recibido:')
-            // console.log(String(message));
-
             resendMessage(message)
-            //await sendMessage(message);
         } catch (error) {
-            //console.log(error)
         }
     });
 }

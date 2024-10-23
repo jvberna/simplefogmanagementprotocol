@@ -1,55 +1,55 @@
 /**
  * 
- * Componente BALANCER
- * Argumentos
- * node balancer.js port type url_suplente
- * 1.- PORT: puerto por el que escucha el componente
- * 2.- TYPE: main/subs, indica si es componente principal o está como sustituto
- * 3.- URL: url del balanceador principal
+ * Component BALANCER
+ * Arguments
+ * node balancer.js port type url_substitute
+ * 1.- PORT: port on which the component listens
+ * 2.- TYPE: main/subs, indicates whether it is a major component or a substitute
+ * 3.- URL: url of the main balancer
  * 
- * nodemon balancer.js 3100 suplente http://127.0.0.1:3000/
+ * nodemon balancer.js 3100 substitute http://127.0.0.1:3000/
  * 
  */
 
-// Cargar variables de entorno
+// Load environment variables
 require('dotenv').config();
 
-// Incluirmos la librería de express para levantar una API y CORS
+// We include the "express" library to build an API and CORS.
 const express = require('express')
 const cors = require('cors');
 
-// Metemos body-parser para poder parsear las request que nos llegarán por la API
+// We add body-parser to be able to parse the requests that we receive through the API.
 const bodyParser = require('body-parser');
 
-// Funciones auxiliares
+// Auxiliary functions
 const { parseArgs } = require('./functions')
 
-// Obtenemso los párametros y los validamos o error
+// We obtain the parameters and validate them or error.
 const parameters = parseArgs(process.argv);
 if (parameters==-1) return
 
-// Creamos la APP y la configuramos para parsear JSON en la request
+// We create the APP and configure it to parse JSON in the request
 const app = express()
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
 
-// atendemos solo peticion post
+// We attend only post request
 app.use('/', require('./r_balancer'));
 
-// Levantamos el servidor en un puerto
+// We lift the server on a port
 app.listen(parameters.port, function () {
     console.log(`BALANCER ${parameters.type} LISTENING PORT ${parameters.port}`);
 })
 
 
-// Activa los AYAS
+// Activate AYAS messages
 const {activeAYA, connectMQTT} = require('./c_balancer');
 const { getInternal } = require('./balancerData');
 activeAYA();
 
-// Si soy principal, por defecto activo conexión a MQTT
+// If I am a principal, by default I activate connection to MQTT.
 if (getInternal('type')=='main') connectMQTT();
 
 

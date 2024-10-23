@@ -1,7 +1,7 @@
-// Librerias de terceros
+// Third-party libraries
 const axios = require('axios');
 const { response, request } = require('express'); // Response de Express
-const { validationResult, check } = require('express-validator'); // ValidationResult de Express Validator
+const { validationResult, check } = require('express-validator'); // ValidationResult of Express Validator
 
 const permetedTypes = ['REQUEST', 'REPLY'];
 const permetedOperations = ['DEBUG','GETSTATUS', 'INFOSTATUS', 'SETCONFIG', 'REGISTER', 'UNREGISTER', 'AREYOUALIVE','RESULT','AYA']
@@ -10,16 +10,16 @@ const {uid} = require('uid');
 
 
 
-// Crea un nuevo UID único
+// Create a new unique UID
 const newUID = ()=> {
     return uid(Number(25));
 }
 
 const defaultMessage = {UID:newUID(), Type:'REPLY', Operation:'RESULT', Data: {info:'INVALID MESSAGE', UID:-1}};
 
-// Función que crea un mensaje SFMP
+// Function that creates a SFMP message
 const createSFMPMessage = (Type='REPLY', Operation='RESULT', Data={}) => {
-    // Comprobamos los parámetros que pasa y si no son correcto deolvemos un mensaje vacio.
+    // We check the parameters passed and if they are not correct we return an empty message.
     Type = Type.toUpperCase();
     Operation = Operation.toUpperCase();
     if (!permetedTypes.includes(Type) || !permetedOperations.includes(Operation)) return defaultMessage;
@@ -32,7 +32,7 @@ const createSFMPMessage = (Type='REPLY', Operation='RESULT', Data={}) => {
 }
 
 const createResendMessage = (Origin='', Data={}) => {
-    // Comprobamos los parámetros que pasa y si no son correcto deolvemos un mensaje vacio.
+    // We check the parameters passed and if they are not correct we return an empty message.
     return {
         UID:newUID(),
         Origin,
@@ -40,33 +40,29 @@ const createResendMessage = (Origin='', Data={}) => {
     };
 }
 
-// Función para enviar mensajes por SFMP
+// Function to send messages by SFMP
 const sendSFMPMessage = async (url='', data={}) => { 
     if (url.length<=0) return 0;
-    //console.log('sendSFMPMessage enviado a:',url+'/'+process.env.SFMPROUTE);
     axios.post(url+'/'+process.env.SFMPROUTE, data)
         .then(function (response) {
-           // console.log('enviado a:',url+'/'+process.env.SFMPROUTE);
-            //console.log(response.data);
             return 1;
         })
         .catch(function (error) {
-            //console.log('Error en sendSFMPMessage: ',error);
             return -1;
         });
     return 0;
 }
 
 /**
- * Comprobación de si hay errores detectados durante el manejo de la ruta
- */
+* Checking for errors detected during route management 
+*/
 
 const validateFields = (req = request, res = response, next) => {
 
-   const erroresVal = validationResult(req);
-    if (!erroresVal.isEmpty()) {
+   const errorsVal = validationResult(req);
+    if (!errorsVal.isEmpty()) {
         res.status(400).json({
-            errores: erroresVal.mapped()
+            errors: errorsVal.mapped()
         });
         return;
     }  
@@ -77,10 +73,10 @@ const validateFields = (req = request, res = response, next) => {
 const validateSFMPMessage = () => {
     return [
         check(['UID', 'Type', 'Operation', 'Data'], 'Field is missing or empty').notEmpty(),
-        check('Type', 'Permeted type are ' + String(permetedTypes)).isIn(permetedTypes),
-        check('Operation', 'Permeted operations are ' + String(permetedOperations)).isIn(permetedOperations),
+        check('Type', 'Permited type are ' + String(permetedTypes)).isIn(permetedTypes),
+        check('Operation', 'Permited operations are ' + String(permetedOperations)).isIn(permetedOperations),
     ]
 }
 
-// Marcar para exportar.
+// Mark for export.
 module.exports = { createSFMPMessage, validateFields, validateSFMPMessage, sendSFMPMessage, createResendMessage }

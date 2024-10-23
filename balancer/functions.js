@@ -48,13 +48,13 @@ const msg = {
 const typePermeted = ['main', 'subs']
 
 /**
- * Receibe array or args and return object whith arguments validation or error
+ * Receive array or args and return object with arguments validation or error
  */
 const { setInternal } = require('./balancerData');
 
 const parseArgs = (args) => {
 
-    // Obtenemso el puerto de la entrada de comando
+    // We get the port of the command input
     const port = Number(args[2] || 0);
 
     if (!port || port <= 0) {
@@ -62,7 +62,7 @@ const parseArgs = (args) => {
         return -1;
     }
 
-    // obtenemso el type, debe ser main o subs
+    // we get the type, must be main or subs
     const type = String(args[3] || '');
     if (!typePermeted.includes(type.toLowerCase())) {
         console.error(msg.error_type);
@@ -83,7 +83,7 @@ const parseArgs = (args) => {
 
 const updateBalancerList = (balancerList, Data) => {
     balancerList.splice(0, balancerList.length);
-    // añadimos los nuevos elementos a la lista
+    // add the new items to the list
     Data.forEach(element => {
         balancerList.push({name:element.name, load:element.load, url: element.url});
     });

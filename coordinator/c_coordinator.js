@@ -1,4 +1,4 @@
-// Para tipar los parámetros
+// To type the parameters
 const { response, request } = require('express'); // Response de Express
 
 const { addProcessor, deleteProcessor, updateBalancerList } = require('./functions');
@@ -6,26 +6,26 @@ const { createSFMPMessage, sendSFMPMessage } = require('../commons/commons')
 
 
 
-// Lista de nodos registrados en el coordinador
-// cada nodo tiene la forma: {name:'nombre', capacity:number, url:'call_url', preference: number}
+// List of nodes registered with the coordinator
+// each node has the form: {name:'nombre', capacity:number, url:'call_url', preference: number}
 
 const processorsList = [
     
 ];
 
-// Configuración para el balanceador
-// Lista de procesadores
+// Configuration for the balancer 
+// List of processors
 const balancerList = [
     
 ]
 
-// Carga de mensajes del balanceador, se utilza para calcular la lsita de balancerList
-// -1 indica que no se tienen datos de carga con lo que balancerList = procesorsList
+// Balancer message load, used to calculate the balancerList list 
+// -1 indicates that no load data is available so balancerList = processorsList
 var receivedMessages = -1;
 
-// Variables para controlar reenvios de AYA al coordinador principal
+// Variables to control AYA forwarding to the main coordinator
 var coordinatorMainMaxAYA = Number(process.env.AYAMAXSENDS);
-// Variable para controlar si soy coordinadorSustitutoActivo
+// Variable to control whether I am coordinatorSubstituteActive
 var coordinatorSubsActive = false;
 
 const { getInternal, internalConfig } = require('./coordinatorData');
@@ -36,10 +36,10 @@ const processCoordinatorSFMP = (req = request, res = response) => {
 
     if (Type == 'REQUEST') {
 
-        // Creamos un mensaje de respuesta por defecto
-        var reply = createSFMPMessage('REPLY', 'RESULT', { info: 'Operación no manejada', UID: UID });
+        // We create a default reply message
+        var reply = createSFMPMessage('REPLY', 'RESULT', { info: 'Unmanaged operation', UID: UID });
 
-        // Esta operación es con fines de testing de SFMP
+        // This operation is for SFMP testing purposes.
         if (Operation == 'DEBUG') {
             reply = createSFMPMessage('REPLY', 'RESULT', { UID: UID, coordinatorSubsActive, coordinatorMainMaxAYA, receivedMessages, processorsList, balancerList, internalConfig })
             res.status(200).json(reply)
@@ -48,30 +48,28 @@ const processCoordinatorSFMP = (req = request, res = response) => {
 
 
         if (Operation == 'REGISTER') {
-            //console.log('Tenemos register de proceesor', Data)
             const result = addProcessor(Data, processorsList);
             switch (result) {
                 case 1:
                     reply = createSFMPMessage('REPLY', 'RESULT', { info: 'OK', UID: UID });
                     res.status(200).json(reply);
 
-                    // Ahora debe enviar un mensaje al balanceador para pedirle su estado y así actualizar la lista
+                    // You should now send a message to the balancer to request its status to update the list.
                     const messageGETSTATUS = createSFMPMessage('REQUEST', 'GETSTATUS', { urlCoordinator: process.env.LOCAL_URL + ':' + getInternal('port') });
                     sendSFMPMessage(getInternal('urlBalancerMain'), messageGETSTATUS);
                     sendSFMPMessage(getInternal('urlBalancerSubs'), messageGETSTATUS);
-                    //console.log('Envio de GETSTATUS a los dos balanceadores')
-                    // Si hemos modificado la lista, ordenamos la lista por preferencia y carga y actualizamos la lista de balanceadores
+                    // If we have modified the list, we sort the list by preference and load and update the list of balancers.
                     //updateBalancerList(processorsList, balancerList, receivedMessages);
                     return;
                     break;
                 case 0:
-                    reply = createSFMPMessage('REPLY', 'RESULT', { info: 'ERROR ya existe el procesador', UID: UID })
+                    reply = createSFMPMessage('REPLY', 'RESULT', { info: 'ERROR processor already exists', UID: UID })
                     res.status(200).json(reply);
                     return;
                     break;
 
                 default:
-                    reply = createSFMPMessage('REPLY', 'RESULT', { info: 'ERROR no se pudo añadir el procesador, error:' + result, UID: UID })
+                    reply = createSFMPMessage('REPLY', 'RESULT', { info: 'ERROR processor could not be added, error:' + result, UID: UID })
                     res.status(200).json(reply);
                     return;
                     break;
@@ -86,19 +84,19 @@ const processCoordinatorSFMP = (req = request, res = response) => {
                     reply = createSFMPMessage('REPLY', 'RESULT', { info: 'OK', UID: UID });
                     res.status(200).json(reply);
 
-                    // Si hemos modificado la lista, ordenamos la lista por preferencia y carga y actualizamos la lista de balanceadores
+                    // If we have modified the list, we sort the list by preference and load and update the list of balancers.
                     updateBalancerList(processorsList, balancerList, receivedMessages);
                     return;
                     break;
                 case 0:
-                    reply = createSFMPMessage('REPLY', 'RESULT', { info: 'ERROR el procesador no existe', UID: UID })
+                    reply = createSFMPMessage('REPLY', 'RESULT', { info: 'ERROR processor does not exist', UID: UID })
                     res.status(200).json(reply);
                     return;
 
                     break;
 
                 default:
-                    reply = createSFMPMessage('REPLY', 'RESULT', { info: 'ERROR no se pudo borrar el procesador, error:' + result, UID: UID })
+                    reply = createSFMPMessage('REPLY', 'RESULT', { info: 'ERROR processor could not be erased, error:' + result, UID: UID })
                     res.status(200).json(reply);
                     return;
                     break;
@@ -107,22 +105,21 @@ const processCoordinatorSFMP = (req = request, res = response) => {
         }
 
         if (Operation == 'INFOSTATUS') {
-            // Recibe infostatus del balanceador, nos interesa el total
+            // Receive infostatus from the balancer, we are interested in the total.
             reply = createSFMPMessage('REPLY', 'RESULT', { info: 'OK', UID: UID });
             res.status(200).json(reply);
 
-            // este infostatus se recibe
-            //  - desde el balanceador tras un getstatus, y es para actualizar el número de mensajes por segundo que recibe el balanceador
-            //  y así calcular la balancerList
-            // - desde un coordinador principal, porque soy el subs y estoy actualizando mi estado interno, recibir processorsList y balancerList
+            // this infostatus is received
+            //  - from the balancer after a getstatus, and is to update the number of messages per second received by the balancer.
+            //  and thus calculate the balancerList
+            // - from a main coordinator, because I am the subs and I am updating my internal status, receive processorsList and balancerList
 
-            // si en el Data viene el campo receivedMessages es el primer caso
+            // if the receivedMessages field is in the Data, it is the first case
 
             receivedMessages = Data.receivedMessages;// || -1;
             if (receivedMessages == undefined) {
                 receivedMessages = Data.coordinatorReceivedMessages;
-                //console.log('Viene de un coordinador main:',Data);
-                // borramos la lista de processorsList y balancerList y metemos la que nos ha llegado
+                // we delete the processorsList and balancerList and insert the one we have received.
                 processorsList.splice(0, processorsList.length)
                 for (i = 0; i < Data.processorsList.length; i++) {
                     processorsList.push(Data.processorsList[i]);
@@ -131,18 +128,15 @@ const processCoordinatorSFMP = (req = request, res = response) => {
                 for (i = 0; i < Data.balancerList.length; i++) {
                     balancerList.push(Data.balancerList[i]);
                 }
-                //console.log('La procccesorList del coordinador subs es:', processorsList,' y el balancerList:',balancerList)
                 return;
             } else {
-                //console.log('Recibimos INFOSTATUS Actualizar receivedMessages:', receivedMessages)
                 updateBalancerList(processorsList, balancerList, receivedMessages);
             }
-            // hacer un SETCONFIG al balanceador
+            // do a SETCONFIG to the balancer
             const messageSETCONFIG = createSFMPMessage('REQUEST', 'SETCONFIG', balancerList)
-            // Envía los setconfig a los balanceadores princial y sustituto
+            // Send setconfig to the primary and surrogate balancers.
             sendSFMPMessage(getInternal('urlBalancerMain'), messageSETCONFIG);
             sendSFMPMessage(getInternal('urlBalancerSubs'), messageSETCONFIG);
-            //console.log('Hacemos SETCONFIG balanceador principal y sustituo')
 
             return;
 
@@ -151,7 +145,6 @@ const processCoordinatorSFMP = (req = request, res = response) => {
         if (Operation == 'AYA') {
             reply = createSFMPMessage('REPLY', 'RESULT', { info: 'OK', UID: UID });
             res.status(200).json(reply);
-            //console.log('Soy coordinador y me llega un aya, constesto con un INFOSTATUS')
             const messsageINFOSTATUS = createSFMPMessage('REQUEST', 'INFOSTATUS', {coordinatorReceivedMessages:receivedMessages, processorsList:processorsList, balancerList:balancerList})
             sendSFMPMessage(Data.urlCoordinatorSubs, messsageINFOSTATUS);
             return;
@@ -161,16 +154,15 @@ const processCoordinatorSFMP = (req = request, res = response) => {
             reply = createSFMPMessage('REPLY', 'RESULT', { info: 'OK', UID: UID })
             res.status(200).json(reply);
 
-            //console.log('GETSTATUS, nos llega Data:', Data);
         }
 
-        // Se envía el mensaje de reply generado
+        // The generated reply message is sent
         res.status(200).json(reply);
         return;
     }
 
     if (Type == 'REPLY') {
-        // NO HACEMOS NADA
+        // WE DO NOTHING
     }
 
     res.status(200).json(reply);
@@ -179,17 +171,15 @@ const processCoordinatorSFMP = (req = request, res = response) => {
 
 const axios = require('axios');
 
-// Activar AYA, se programa el envio de los AYA y el de los resendAYA cuando hay algun processor que no ha contestado antes
+// Activate AYA, it is programmed to send AYA and resendAYA when there is a processor who has not answered before.
 const activateAYA = () => {
-    // Si soy proceso sustituto activo el AYA hacia el coordinador principal
+    // If I am a substitute process I activate the AYA towards the main coordinator.
     if (getInternal('type') == 'subs') {
         setTimeout(coordinatorAYA, Number(process.env.AYASENDTIME))
-        //console.log('Proceso SUBS activa AYA hacia cooridnador principal en seg:', Number(process.env.AYASENDTIME))
         return;
     }
-    // Soy el coordinador principal, activo los AYA hacia los procesadores
+    // I am the main coordinator, I activate the AYAs to the processors.
     if (getInternal('type') == 'main') {
-        //console.log('Activando AYA en: SEND(', process.env.AYASENDTIME, ') y RESEND(', process.env.AYARESENDTIME, ')');
         setTimeout(processorsAYA, Number(process.env.AYASENDTIME));
         setTimeout(processorsResendAYA, Number(process.env.AYARESENDTIME))
     }
@@ -197,17 +187,14 @@ const activateAYA = () => {
 
 
 
-// Enviar mensaje a coordinador principal para controlar que sigue activo
+// Send message to main coordinator to check that he/she is still active.
 function coordinatorAYA() {
-    //console.log('Inicio envio AYA corodinador suplente a coordinador princiapl')
     const data = { urlCoordinatorSubs: process.env.LOCAL_URL + ':' + getInternal('port') }
     const messageAYACoordinator = createSFMPMessage('REQUEST', 'AYA', data);
-    //console.log('Envio AYA a cordinador main ', getInternal('urlCoordinatorlMain'), ' con data:', messageAYACoordinator)
 
     axios.post(getInternal('urlCoordinatorlMain') + '/' + process.env.SFMPROUTE, messageAYACoordinator)
         .then(function (response) {
-            //console.log('El coordinador principal sigue activo');
-            // Si soy un subs activo y me acaban de responder, le hago un INFOSTATUS al principal
+            // If I am an active subs and I have just been answered, I INFOSTATUS the main one.
             if (coordinatorSubsActive) {
                 const messsageINFOSTATUS = createSFMPMessage('REQUEST', 'INFOSTATUS', {processorsList:processorsList, balancerList:balancerList})
                 sendSFMPMessage(getInternal('urlCoordinatorlMain'), messsageINFOSTATUS);
@@ -218,41 +205,33 @@ function coordinatorAYA() {
             setTimeout(coordinatorAYA, Number(process.env.AYASENDTIME))
         })
         .catch(function (error) {
-            //console.log('El coordinador principal no contesta, hacemos resend');
             coordinatorMainMaxAYA--;
             if (coordinatorMainMaxAYA <= 0) {
-                //console.log('Ya se han terminado los intentos, debe asumir el rol de coordinador principal');
                 if (getInternal('type') == 'subs') {
-                    // Activo el coordinador SUBS, activo el updateconfig
+                    // I activate the SUBS coordinator, I activate updateconfig
                     coordinatorSubsActive = true;
                     activateUPDATECONFIG();
                 }
-                // Activmos envio de AYAs a los procesadores
+                // We activate sending AYAs to processors.
                 setTimeout(processorsAYA, Number(process.env.AYASENDTIME))
 
-
-                // Dejo programado el siguiete AYA por
-                //console.log('Dejo el AYA de comprobación activo')
+                // I leave the following AYA scheduled
                 setTimeout(coordinatorAYA, Number(process.env.AYASENDTIME))
 
-
             } else {
-                //console.log('Reenviamos AYA a coordinador principal en:', process.env.AYARESENDTIME)
                 setTimeout(coordinatorAYA, Number(process.env.AYARESENDTIME))
             }
         });
 }
 
-// Enviar AYA a los procesadores en la lista
+// Send AYA to processors on the list
 function processorsAYA() {
 
-    // Si por un casual fuese subs y ya no estoy activo, salgo del processorAYA porque el main ya lo estará haciendo
+    // If by any chance I were subs and I am no longer active, I exit the processorAYA because the main will already be doing it.
     if (getInternal('type') == 'subs' && coordinatorSubsActive == false) return;
 
-    //console.log('Inicio envio de mensajes AYA de coordinador a procesadores');
-    // enviamos un mensaje AYA a cada elemento de la lista de processorsList, descontamos un numero en el AYACOUNT y anotamos el UID
+    // send an AYA message to each element of the processorsList, subtract a number in the AYACOUNT and write down the UID
     processorsList.forEach(element => {
-        //console.log('Envío AYA a:', element)
         const message = createSFMPMessage('REQUEST', 'AYA', {});
         element.AYACOUNT--;
         element.AYAUID = message.UID;
@@ -262,52 +241,45 @@ function processorsAYA() {
                 if (response.data.Data.UID == element.AYAUID) {
                     element.AYACOUNT = Number(process.env.AYAMAXSENDS);
                     element.AYAUID = '';
-                    //console.log('Responde AYA:', element)
                 }
             })
             .catch(function (error) {
-                ////console.log('error:',error);
             });
 
     });
-    //console.log('Enviado AYA processorsList:', processorsList)
-    // Si soy el coordinador principal o soy un subs activo programo siguiente processorsAYA
+    // If I am the main coordinator or I am an active subs I schedule the following processorsAYA
     if (getInternal('type') == 'main' || coordinatorSubsActive) {
         setTimeout(processorsAYA, Number(process.env.AYASENDTIME))
     }
 }
 
-// Hacer resend solo a los procesadores que están pendiente de contestar
+// Resend only to processors that are pending to answer.
 function processorsResendAYA() {
-    //console.log('Inicio Resend de mensajes AYA');
-    // eliminamos de processorsList todos los que tengan AYACOUNT a 0 porque significa que ya se han enviado todos los intentos posibles
+    // remove from processorsList all those with AYACOUNT set to 0 because it means that all possible attempts have already been sent.
 
     var deleted = 0;
     for (let index = 0; index < processorsList.length; index++) {
         if (processorsList[index].AYACOUNT <= 0) {
-            //console.log('Eliminar processador:', processorsList[index]);
             processorsList.splice(index, 1);
             deleted++;
         }
     }
 
-    // Si he eliminado procesadores de la lista hay que actualizar la lista, para eso se envía un GETINFO al balanceador
+    // If I have removed processors from the list, the list has to be updated by sending a GETINFO to the balancer.
     if (deleted > 0) {
-        // Se actaaliza la lista con los procesadores que hay activos y la carga que se tiene en se momento
-        // Ahora debe enviar un mensaje al balanceador para pedirle su estado y así actualizar la lista
+        // The list is updated with the active processors and the current load.
+        // You should now send a message to the balancer to request its status to update the list.
         const messageGETSTATUS = createSFMPMessage('REQUEST', 'GETSTATUS', { urlCoordinator: process.env.LOCAL_URL + ':' + getInternal('port') });
         sendSFMPMessage(getInternal('urlBalancerMain'), messageGETSTATUS);
         sendSFMPMessage(getInternal('urlBalancerSubs'), messageGETSTATUS);
-        //console.log('Envio de GETSTATUS a los dos balanceadores')
     }
 
     const resendList = [];
-    // enviamos un mensaje AYA a cada elemento de la lista de processorsList, descontamos un numero en el AYACOUNT y anotamos el UID
+    // send an AYA message to each element of the processorsList, subtract a number in the AYACOUNT and write down the UID
     processorsList.forEach(element => {
-        // Solo para los elmentos que están pendientes de recibir contestación, enviamos mensaje
+        // Only for items that are pending a reply, we send message
         if (element.AYACOUNT < Number(process.env.AYAMAXSENDS)) {
             resendList.push(element);
-            //console.log('Envío ResendAYA a:', element)
             const message = createSFMPMessage('REQUEST', 'AYA', {});
             element.AYACOUNT--;
             element.AYAUID = message.UID;
@@ -316,40 +288,34 @@ function processorsResendAYA() {
                     if (response.data.Data.UID == element.AYAUID) {
                         element.AYACOUNT = Number(process.env.AYAMAXSENDS);
                         element.AYAUID = '';
-                        //console.log('Responde de Resend AYA:', element)
                     }
                 })
                 .catch(function (error) {
-                    //console.log('error:',error);
                 });
 
         }
     });
-    //console.log('Enviado RESEND AYA processorsList:', resendList)
     setTimeout(processorsResendAYA, Number(process.env.AYARESENDTIME))
 }
 
-// Programar que cada UPDATECONFIG segundos se haga GETSTATUS al balanceador para renovar 
+// Schedule every UPDATECONFIG seconds to GETSTATUS the balancer to renew 
 const activateUPDATECONFIG = () => {
     if (getInternal('type') == 'subs' && coordinatorSubsActive) {
-        //console.log('Soy el cooordinador subs y estoy activo, activo UPDATECONFIG')
         setTimeout(updateConfig, process.env.UPDATE_CONFIG)
         return;
     }
-    // Soy el coordinador principal, activo los AYA hacia los procesadores
+    // I am the main coordinator, I activate the AYAs to the processors.
     if (getInternal('type') == 'main') {
-        //console.log('Soy el cooordinador main, activo UPDATECONFIG')
         setTimeout(updateConfig, process.env.UPDATE_CONFIG);
     }
 
 }
 
 const updateConfig = () => {
-    // Enviar mensaje de GETSTATUS al los balanceadores main y subs
+    // Send GETSTATUS message to main and subs balancers
     const messageGETSTATUS = createSFMPMessage('REQUEST', 'GETSTATUS', { urlCoordinator: process.env.LOCAL_URL + ':' + getInternal('port') });
     sendSFMPMessage(getInternal('urlBalancerMain'), messageGETSTATUS);
     sendSFMPMessage(getInternal('urlBalancerSubs'), messageGETSTATUS);
-    //console.log('Envio de GETSTATUS a los dos balanceadores')
 }
 
 module.exports = { processCoordinatorSFMP, activateAYA, activateUPDATECONFIG }
